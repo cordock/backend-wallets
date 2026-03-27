@@ -1,1 +1,13 @@
-spring.application.name=sentbe-wallets
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/wallet
+    username: user
+    password: password
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
