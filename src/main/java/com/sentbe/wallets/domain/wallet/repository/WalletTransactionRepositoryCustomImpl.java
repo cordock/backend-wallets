@@ -26,10 +26,7 @@ public class WalletTransactionRepositoryCustomImpl implements WalletTransactionR
         List<WalletTransaction> contents = queryFactory
             .selectFrom(WALLET_TRANSACTION)
             .where(WALLET_TRANSACTION.walletId.eq(walletId))
-            .orderBy(
-                WALLET_TRANSACTION.requestedAt.desc(),
-                WALLET_TRANSACTION.id.desc()
-            )
+            .orderBy(WALLET_TRANSACTION.id.desc())
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
             .fetch();
