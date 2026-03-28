@@ -48,18 +48,11 @@ public class WalletService {
             return handleExistingTransaction(walletTransaction);
         }
 
-        // 2. wallet 조회 (Pessimistic Lock)
-        Wallet wallet = walletRepository.findByIdForUpdate(id)
+        // 2. wallet 조회 (no lock)
+        Wallet wallet = walletRepository.findById(id)
             .orElseThrow(() -> new BusinessException(ResponseCode.NOT_FOUND_WALLET));
 
-        // 3. 락 획득 후 멱등성 재확인
-        WalletTransaction lockedExistingTransaction = getWalletTransaction(id, transactionId);
-
-        if (lockedExistingTransaction != null) {
-            return handleExistingTransaction(lockedExistingTransaction);
-        }
-
-        // 4. 잔액 검증
+        // 3. 잔액 검증
         if (wallet.getBalance() < amount) {
             walletTransactionService.saveFailedWithdrawal(
                 wallet,
@@ -71,10 +64,10 @@ public class WalletService {
             throw new BusinessException(ResponseCode.INSUFFICIENT_BALANCE);
         }
 
-        // 5. 출금 처리
+        // 4. 출금 처리
         wallet.decreaseBalance(amount);
 
-        // 6. 성공 transaction 저장
+        // 5. 성공 transaction 저장
         WalletTransaction successTransaction = WalletTransaction.ofWithdraw(
             id,
             transactionId,
