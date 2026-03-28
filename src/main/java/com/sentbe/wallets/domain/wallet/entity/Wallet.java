@@ -38,6 +38,13 @@ public class Wallet {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    public static Wallet of(Long memberId, Long balance) {
+        Wallet wallet = new Wallet();
+        wallet.memberId = memberId;
+        wallet.balance = balance;
+        return wallet;
+    }
+
     public void decreaseBalance(Long amount) {
         this.balance -= amount;
     }
