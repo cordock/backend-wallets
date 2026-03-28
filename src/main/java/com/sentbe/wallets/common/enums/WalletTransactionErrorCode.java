@@ -1,6 +1,6 @@
 package com.sentbe.wallets.common.enums;
 
-import com.sentbe.wallets.common.exception.ErrorCode;
+import com.sentbe.wallets.common.exception.ResponseCode;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -9,11 +9,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum WalletTransactionErrorCode {
 
-    INSUFFICIENT_BALANCE(ErrorCode.INSUFFICIENT_BALANCE);
+    INSUFFICIENT_BALANCE(ResponseCode.INSUFFICIENT_BALANCE);
 
-    private final ErrorCode errorCode;
+    private final ResponseCode responseCode;
 
-    public ErrorCode toErrorCode() {
-        return errorCode;
+    public ResponseCode toResponseCode() {
+        return responseCode;
     }
 }

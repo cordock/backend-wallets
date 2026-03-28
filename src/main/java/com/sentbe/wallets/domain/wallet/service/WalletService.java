@@ -2,13 +2,16 @@ package com.sentbe.wallets.domain.wallet.service;
 
 import java.time.LocalDateTime;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sentbe.wallets.common.enums.WalletTransactionErrorCode;
 import com.sentbe.wallets.common.enums.WalletTransactionStatus;
 import com.sentbe.wallets.common.exception.BusinessException;
-import com.sentbe.wallets.common.exception.ErrorCode;
+import com.sentbe.wallets.common.exception.ResponseCode;
+import com.sentbe.wallets.domain.wallet.dto.WalletTransactionListDto;
 import com.sentbe.wallets.domain.wallet.dto.WalletWithdrawalReqDto;
 import com.sentbe.wallets.domain.wallet.dto.WalletWithdrawalResDto;
 import com.sentbe.wallets.domain.wallet.entity.Wallet;
@@ -47,7 +50,7 @@ public class WalletService {
 
         // 2. wallet 조회 (Pessimistic Lock)
         Wallet wallet = walletRepository.findByIdForUpdate(id)
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_WALLET));
+            .orElseThrow(() -> new BusinessException(ResponseCode.NOT_FOUND_WALLET));
 
         // 3. 락 획득 후 멱등성 재확인
         WalletTransaction lockedExistingTransaction = getWalletTransaction(id, transactionId);
@@ -65,7 +68,7 @@ public class WalletService {
                 WalletTransactionErrorCode.INSUFFICIENT_BALANCE
             );
 
-            throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
+            throw new BusinessException(ResponseCode.INSUFFICIENT_BALANCE);
         }
 
         // 5. 출금 처리
@@ -88,6 +91,21 @@ public class WalletService {
     }
 
     /**
+     * 월렛 입출금 내역 조회
+     * @param id 월렛 ID
+     * @return
+     */
+    @Transactional(readOnly = true)
+    public Page<WalletTransactionListDto> getTransactions(Long id, Pageable pageable) {
+        if (!walletRepository.existsById(id)) {
+            throw new BusinessException(ResponseCode.NOT_FOUND_WALLET);
+        }
+
+        return walletTransactionRepository.findAllPage(id, pageable)
+            .map(WalletTransactionListDto::from);
+    }
+
+    /**
      * 기존 입출금 내역 기반 응답 처리
      * @param walletTransaction 기존 입출금 내역
      * @return
@@ -95,9 +113,9 @@ public class WalletService {
     private WalletWithdrawalResDto handleExistingTransaction(WalletTransaction walletTransaction) {
         if (walletTransaction.getStatus() == WalletTransactionStatus.FAILED) {
             if (walletTransaction.getErrorCode() != null) {
-                throw new BusinessException(walletTransaction.getErrorCode().toErrorCode());
+                throw new BusinessException(walletTransaction.getErrorCode().toResponseCode());
             }
-            throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
+            throw new BusinessException(ResponseCode.INSUFFICIENT_BALANCE);
         }
 
         return toResponse(walletTransaction);
@@ -121,4 +139,5 @@ public class WalletService {
             errorCode
         );
     }
+
 }

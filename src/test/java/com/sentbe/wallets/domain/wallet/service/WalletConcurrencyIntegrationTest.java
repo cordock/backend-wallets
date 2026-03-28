@@ -2,9 +2,10 @@ package com.sentbe.wallets.domain.wallet.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Queue;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -23,7 +24,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.sentbe.wallets.common.enums.WalletTransactionStatus;
 import com.sentbe.wallets.common.exception.BusinessException;
-import com.sentbe.wallets.common.exception.ErrorCode;
+import com.sentbe.wallets.common.exception.ResponseCode;
 import com.sentbe.wallets.domain.wallet.dto.WalletWithdrawalReqDto;
 import com.sentbe.wallets.domain.wallet.dto.WalletWithdrawalResDto;
 import com.sentbe.wallets.domain.wallet.entity.Wallet;
@@ -43,7 +44,9 @@ class WalletConcurrencyIntegrationTest {
     private static final long WITHDRAW_AMOUNT = 1_000L;
     private static final int THREAD_COUNT = 100;
     private static final int FAILURE_THREAD_COUNT = 20;
-    private static final String PREFIX_TRANSACTION_ID = "TX_TEST_";
+
+    private static final String PREFIX_TRANSACTION_ID = "TX_";
+    private static final String TX_DATE = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
 
     @Autowired
     private WalletService walletService;
@@ -80,7 +83,7 @@ class WalletConcurrencyIntegrationTest {
         long expectedBalance = DEFAULT_INITIAL_BALANCE - WITHDRAW_AMOUNT;
 
         // When
-        ConcurrencyResult result = runConcurrentWithdrawals(walletId, THREAD_COUNT, WITHDRAW_AMOUNT, TxIdMode.SAME);
+        ConcurrencyResult result = runConcurrentWithdrawals(walletId, THREAD_COUNT, WITHDRAW_AMOUNT, true);
 
         // Then
         SoftAssertions softly = new SoftAssertions();
@@ -120,8 +123,7 @@ class WalletConcurrencyIntegrationTest {
         long overWithdrawAmount = DEFAULT_INITIAL_BALANCE + WITHDRAW_AMOUNT;
 
         // When
-        ConcurrencyResult result = runConcurrentWithdrawals(walletId, FAILURE_THREAD_COUNT, overWithdrawAmount,
-            TxIdMode.SAME);
+        ConcurrencyResult result = runConcurrentWithdrawals(walletId, FAILURE_THREAD_COUNT, overWithdrawAmount, true);
 
         // Then
         SoftAssertions softly = new SoftAssertions();
@@ -165,7 +167,7 @@ class WalletConcurrencyIntegrationTest {
         walletId = createWallet(DEFAULT_INITIAL_BALANCE);
 
         // When
-        ConcurrencyResult result = runConcurrentWithdrawals(walletId, THREAD_COUNT, WITHDRAW_AMOUNT, TxIdMode.UNIQUE);
+        ConcurrencyResult result = runConcurrentWithdrawals(walletId, THREAD_COUNT, WITHDRAW_AMOUNT, false);
 
         // Then
         Wallet wallet = walletRepository.findById(walletId).orElseThrow();
@@ -200,8 +202,7 @@ class WalletConcurrencyIntegrationTest {
 
     @Test
     @DisplayName("서로 다른 transactionId 동시 요청 시 잔액 부족 시점부터는 실패하며 음수 잔액이 되지 않는다")
-    void Given_DifferentTransactionIds_When_ConcurrentWithdrawalsWithLimitedBalance_Then_BalanceNeverNegative() throws
-        Exception {
+    void Given_DifferentTransactionIds_When_ConcurrentWithdrawalsWithLimitedBalance_Then_BalanceNeverNegative() throws Exception {
         // Given
         long limitedInitialBalance = 5_000L;
         int expectedSuccess = 5;
@@ -210,8 +211,7 @@ class WalletConcurrencyIntegrationTest {
         walletId = createWallet(limitedInitialBalance);
 
         // When
-        ConcurrencyResult result = runConcurrentWithdrawals(walletId, FAILURE_THREAD_COUNT, WITHDRAW_AMOUNT,
-            TxIdMode.UNIQUE);
+        ConcurrencyResult result = runConcurrentWithdrawals(walletId, FAILURE_THREAD_COUNT, WITHDRAW_AMOUNT, false);
 
         // Then
         Wallet wallet = walletRepository.findById(walletId).orElseThrow();
@@ -254,8 +254,9 @@ class WalletConcurrencyIntegrationTest {
         }
     }
 
-    private ConcurrencyResult runConcurrentWithdrawals(Long walletId, int threadCount, long amount,
-        TxIdMode txIdMode) throws Exception {
+    private ConcurrencyResult runConcurrentWithdrawals(
+        Long walletId, int threadCount, long amount, boolean isSameTxId
+    ) throws Exception {
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
 
         CountDownLatch readyLatch = new CountDownLatch(threadCount);
@@ -268,6 +269,8 @@ class WalletConcurrencyIntegrationTest {
         Queue<String> unexpectedFailures = new ConcurrentLinkedQueue<>();
         Queue<WalletWithdrawalResDto> responses = new ConcurrentLinkedQueue<>();
 
+        String sharedTransactionId = buildTxId(0);
+
         try {
             for (int i = 0; i < threadCount; i++) {
                 final int index = i;
@@ -277,7 +280,7 @@ class WalletConcurrencyIntegrationTest {
                         readyLatch.countDown();
                         startLatch.await();
 
-                        String transactionId = txIdMode.generate(index);
+                        String transactionId = isSameTxId ? sharedTransactionId : buildTxId(index);
 
                         WalletWithdrawalResDto response = walletService.withdrawal(
                             walletId,
@@ -286,7 +289,7 @@ class WalletConcurrencyIntegrationTest {
                         responses.add(response);
                         successCount.incrementAndGet();
                     } catch (BusinessException e) {
-                        if (e.getErrorCode() == ErrorCode.INSUFFICIENT_BALANCE) {
+                        if (e.getResponseCode() == ResponseCode.INSUFFICIENT_BALANCE) {
                             insufficientCount.incrementAndGet();
                         } else {
                             unexpectedCount.incrementAndGet();
@@ -322,23 +325,8 @@ class WalletConcurrencyIntegrationTest {
         return walletFixture.create(System.nanoTime(), balance).getId();
     }
 
-    private enum TxIdMode {
-        SAME {
-            private final String id = PREFIX_TRANSACTION_ID + UUID.randomUUID();
-
-            @Override
-            public String generate(int index) {
-                return id;
-            }
-        },
-        UNIQUE {
-            @Override
-            public String generate(int index) {
-                return PREFIX_TRANSACTION_ID + index + "_" + UUID.randomUUID();
-            }
-        };
-
-        public abstract String generate(int index);
+    private static String buildTxId(int index) {
+        return PREFIX_TRANSACTION_ID + TX_DATE + "_" + String.format("%05d", index);
     }
 
     private record ConcurrencyResult(

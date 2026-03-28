@@ -30,8 +30,8 @@ public class GlobalExceptionHandler {
         log.warn("Validation failed: {}", errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CustomResponse<>(
             HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_INPUT_VALUE.getCode(),
-            ErrorCode.INVALID_INPUT_VALUE.getMessage(),
+            ResponseCode.INVALID_INPUT_VALUE.getCode(),
+            ResponseCode.INVALID_INPUT_VALUE.getMessage(),
             errors
         ));
     }
@@ -50,22 +50,22 @@ public class GlobalExceptionHandler {
         log.warn("Constraint violation: {}", errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CustomResponse<>(
             HttpStatus.BAD_REQUEST,
-            ErrorCode.INVALID_INPUT_VALUE.getCode(),
-            ErrorCode.INVALID_INPUT_VALUE.getMessage(),
+            ResponseCode.INVALID_INPUT_VALUE.getCode(),
+            ResponseCode.INVALID_INPUT_VALUE.getMessage(),
             errors
         ));
     }
 
     @ExceptionHandler(BusinessException.class)
     protected ResponseEntity<CustomResponse<?>> handleBusinessException(BusinessException exception) {
-        ErrorCode errorCode = exception.getErrorCode();
-        int code = errorCode.getCode();
+        ResponseCode responseCode = exception.getResponseCode();
+        int code = responseCode.getCode();
         String message = exception.getMessage();
         log.error("CustomException occurred - code: {}, message: {}", code, message);
 
         return ResponseEntity
-            .status(errorCode.getHttpStatus())
-            .body(new CustomResponse<>(errorCode.getHttpStatus(), code, message));
+            .status(responseCode.getHttpStatus())
+            .body(new CustomResponse<>(responseCode.getHttpStatus(), code, message));
     }
 
     @ExceptionHandler(Exception.class)
@@ -74,8 +74,8 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CustomResponse<>(
             HttpStatus.INTERNAL_SERVER_ERROR,
-            ErrorCode.INTERNAL_ERROR.getCode(),
-            ErrorCode.INTERNAL_ERROR.getMessage()
+            ResponseCode.INTERNAL_ERROR.getCode(),
+            ResponseCode.INTERNAL_ERROR.getMessage()
         ));
     }
 }

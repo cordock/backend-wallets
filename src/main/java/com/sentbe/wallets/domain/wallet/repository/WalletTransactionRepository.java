@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sentbe.wallets.domain.wallet.entity.WalletTransaction;
 
-public interface WalletTransactionRepository extends JpaRepository<WalletTransaction, Long> {
+public interface WalletTransactionRepository extends JpaRepository<WalletTransaction, Long>, WalletTransactionRepositoryCustom {
 
     Optional<WalletTransaction> findByWalletIdAndTransactionId(Long walletId, String transactionId);
 

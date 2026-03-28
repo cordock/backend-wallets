@@ -4,9 +4,9 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
-import com.sentbe.wallets.common.enums.TransactionType;
 import com.sentbe.wallets.common.enums.WalletTransactionErrorCode;
 import com.sentbe.wallets.common.enums.WalletTransactionStatus;
+import com.sentbe.wallets.common.enums.WalletTransactionType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -50,7 +50,7 @@ public class WalletTransaction {
     private String transactionId;
 
     @Enumerated(EnumType.STRING)
-    private TransactionType type;
+    private WalletTransactionType type;
 
     @Enumerated(EnumType.STRING)
     private WalletTransactionStatus status;
@@ -85,7 +85,7 @@ public class WalletTransaction {
         return WalletTransaction.builder()
             .walletId(walletId)
             .transactionId(transactionId)
-            .type(TransactionType.WITHDRAW)
+            .type(WalletTransactionType.WITHDRAW)
             .status(status)
             .amount(amount)
             .requestedAt(requestedAt)

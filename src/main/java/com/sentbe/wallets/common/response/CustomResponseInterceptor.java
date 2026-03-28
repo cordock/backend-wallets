@@ -1,6 +1,7 @@
 package com.sentbe.wallets.common.response;
 
 import org.springframework.core.MethodParameter;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
@@ -27,6 +28,10 @@ public class CustomResponseInterceptor implements ResponseBodyAdvice<Object> {
 
         if (body == null) {
             return new CustomResponse<>();
+        }
+
+        if (body instanceof Page<?> page) {
+            return new CustomResponse<>(page);
         }
 
         return new CustomResponse<>(body);

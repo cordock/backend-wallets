@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum TransactionType {
+public enum WalletTransactionType {
 
     WITHDRAW("출금"),
     DEPOSIT("입금");

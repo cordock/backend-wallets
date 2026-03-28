@@ -2,10 +2,12 @@ package com.sentbe.wallets.common.response;
 
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.sentbe.wallets.common.exception.ErrorCode;
+import com.sentbe.wallets.common.exception.ResponseCode;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,19 +22,33 @@ public class CustomResponse<T> {
     private final String message;
     private final T data;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private CustomPageInfo pageInfo;
+
     @SuppressWarnings("unchecked")
     public CustomResponse() {
         this.status = HttpStatus.OK.value();
-        this.code = ErrorCode.SUCCESS.getCode();
-        this.message = ErrorCode.SUCCESS.getMessage();
+        this.code = ResponseCode.SUCCESS.getCode();
+        this.message = ResponseCode.SUCCESS.getMessage();
         this.data = (T) Map.of();
+        this.pageInfo = null;
     }
 
     public CustomResponse(T data) {
         this.status = HttpStatus.OK.value();
-        this.code = ErrorCode.SUCCESS.getCode();
-        this.message = ErrorCode.SUCCESS.getMessage();
+        this.code = ResponseCode.SUCCESS.getCode();
+        this.message = ResponseCode.SUCCESS.getMessage();
         this.data = data;
+        this.pageInfo = null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public CustomResponse(Page<?> page) {
+        this.status = HttpStatus.OK.value();
+        this.code = ResponseCode.SUCCESS.getCode();
+        this.message = ResponseCode.SUCCESS.getMessage();
+        this.data = (T) page.getContent();
+        this.pageInfo = CustomPageInfo.from(page);
     }
 
     @SuppressWarnings("unchecked")
@@ -41,6 +57,7 @@ public class CustomResponse<T> {
         this.code = code;
         this.message = message;
         this.data = (T) Map.of();
+        this.pageInfo = null;
     }
 
     public CustomResponse(HttpStatus status, int code, String message, T data) {
@@ -48,5 +65,6 @@ public class CustomResponse<T> {
         this.code = code;
         this.message = message;
         this.data = data;
+        this.pageInfo = null;
     }
 }

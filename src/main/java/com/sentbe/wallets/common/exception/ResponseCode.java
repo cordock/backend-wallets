@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum ErrorCode {
+public enum ResponseCode {
 
     SUCCESS(HttpStatus.OK, 200, "요청이 성공적으로 처리되었습니다."),
 
